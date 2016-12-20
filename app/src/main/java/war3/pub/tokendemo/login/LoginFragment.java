@@ -35,8 +35,6 @@ public class LoginFragment extends BaseFragment<LoginView, LoginPresenter> imple
     ScrollView mLoginFormView;
     @BindView(R.id.btn_login)
     Button mLoginButton;
-    @BindView(R.id.btn_register)
-    Button mRegisterButton;
     @BindView(R.id.tv_error)
     TextView tvError;
     private ProgressDialog mProgressDialog;
@@ -55,6 +53,8 @@ public class LoginFragment extends BaseFragment<LoginView, LoginPresenter> imple
     @OnClick(R.id.btn_login)
     void register() {
         showLoading();
+        SharedPreferencesUtils.saveUserName(mContext, mUserName.getText().toString().trim());
+        SharedPreferencesUtils.savePassword(mContext, mPasswordView.getText().toString().trim());
         ((LoginPresenter) presenter).login(mUserName.getText().toString().trim(), mPasswordView.getText().toString().trim());
     }
 

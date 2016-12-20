@@ -1,10 +1,13 @@
 package war3.pub.tokendemo.main;
 
+import android.content.Context;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.StaggeredGridLayoutManager;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.Menu;
@@ -16,11 +19,10 @@ import java.util.concurrent.TimeUnit;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import rx.Observable;
-import rx.android.schedulers.AndroidSchedulers;
 import rx.functions.Action1;
+import rx.functions.Func0;
 import rx.functions.Func1;
 import rx.functions.Func2;
-import rx.schedulers.Schedulers;
 import war3.pub.tokendemo.R;
 import war3.pub.tokendemo.api.ApiClient;
 import war3.pub.tokendemo.api.RxSchedulers;
@@ -37,58 +39,56 @@ public class MainActivity extends BaseActivity {
     RecyclerView recyclerviewFollow;
     @BindView(R.id.fab)
     FloatingActionButton fab;
+    @BindView(R.id.swipeRefreshLayout)
+    SwipeRefreshLayout swipeRefreshLayout;
+    private Context mContext;
+    private FollowUserAdapter mAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        mContext = this;
         ButterKnife.bind(this);
         setSupportActionBar(toolbar);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
-            }
-        });
-        recyclerviewFollow.setLayoutManager(new LinearLayoutManager(this));
-        ApiClient.getInstance().getLiveApi().getFollow(SharedPreferencesUtils.getToken(this))
-                .flatMap(new Func1<FollowLive, Observable<FollowLive>>() {
+        recyclerviewFollow.setLayoutManager(new StaggeredGridLayoutManager(2, StaggeredGridLayoutManager.VERTICAL));
+        getFollowLive();
+    }
+
+    private void getFollowLive() {
+        swipeRefreshLayout.setRefreshing(true);
+        Observable
+                .defer(new Func0<Observable<FollowLive>>() {
                     @Override
-                    public Observable<FollowLive> call(FollowLive followLive) {
-                        if (followLive.getError() == 903) {
-                            return Observable.error(new Exception("kkkk"));
-                        }
-                        return Observable.just(followLive);
+                    public Observable<FollowLive> call() {
+                        return ApiClient.getInstance().getLiveApi().getFollow(SharedPreferencesUtils.getToken(mContext));
                     }
                 })
-                .retryWhen(new Func1<Observable<? extends Throwable>, Observable<Long>>() {
-                    @Override
-                    public Observable<Long> call(Observable<? extends Throwable> observable) {
-                        return observable.zipWith(Observable.range(1, 4), new Func2<Throwable, Integer, Integer>() {
-                            @Override
-                            public Integer call(Throwable throwable, Integer i) {
-                                return i;
-                            }
-                        }).flatMap(new Func1<Integer, Observable<? extends Long>>() {
-                            @Override
-                            public Observable<? extends Long> call(Integer retryCount) {
-                                return Observable.timer(1, TimeUnit.SECONDS);
-                            }
-                        });
-                    }
-                })
+                .retryWhen(new RetryWithDelay(3, 1000))
                 .compose(RxSchedulers.<FollowLive>applySchedulers())
                 .subscribe(new Action1<FollowLive>() {
-                    @Override
-                    public void call(FollowLive followLive) {
-                    }
-                }, new Action1<Throwable>() {
-                    @Override
-                    public void call(Throwable throwable) {
-                        Log.i("======", throwable.toString());
-                    }
-                });
+                               @Override
+                               public void call(FollowLive followLive) {
+                                   Log.i("======", "获取数据成功");
+                                   Snackbar.make(fab, "获取数据成功", Snackbar.LENGTH_LONG)
+                                           .setAction("Action", null).show();
+                                   swipeRefreshLayout.setRefreshing(false);
+                                   if(mAdapter!=null){
+                                       mAdapter.notifyDataSetChanged();
+                                   }else {
+                                       mAdapter = new FollowUserAdapter(R.layout.item_follow_user, followLive.getData());
+                                       recyclerviewFollow.setAdapter(mAdapter);
+                                   }
+                               }
+                           }
+                        , new Action1<Throwable>() {
+                            @Override
+                            public void call(Throwable throwable) {
+                                swipeRefreshLayout.setRefreshing(false);
+                                Log.i("======", throwable.toString());
+                            }
+                        }
+                );
     }
 
     @Override
@@ -106,10 +106,59 @@ public class MainActivity extends BaseActivity {
         int id = item.getItemId();
 
         //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
+        if (id == R.id.action_clear) {
+            Snackbar.make(fab, "Clear Token", Snackbar.LENGTH_LONG)
+                    .setAction("Action", null).show();
+            SharedPreferencesUtils.saveToken(MainActivity.this, null);
+            return true;
+        } else if (id == R.id.action_refresh) {
+            Snackbar.make(fab, "重新请求数据", Snackbar.LENGTH_LONG)
+                    .setAction("Action", null).show();
+            getFollowLive();
             return true;
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    public class RetryWithDelay implements
+            Func1<Observable<? extends Throwable>, Observable<?>> {
+
+        private final int maxRetries;
+        private final int retryDelayMillis;
+        private int retryCount;
+
+        public RetryWithDelay(int maxRetries, int retryDelayMillis) {
+            this.maxRetries = maxRetries;
+            this.retryDelayMillis = retryDelayMillis;
+            this.retryCount = 0;
+        }
+
+        @Override
+        public Observable<?> call(Observable<? extends Throwable> attempts) {
+            return attempts.flatMap(new Func1<Throwable, Observable<?>>() {
+                @Override
+                public Observable<?> call(final Throwable throwable) {
+                    if (++retryCount <= maxRetries) {
+                        if (throwable instanceof Exception) {
+                            //// TODO: 2016/12/20 有待改进
+                            Log.i("======", "重新登录");
+                            //重新登录
+                            ApiClient.getInstance().getLiveApi().login(SharedPreferencesUtils.getUserName(mContext), SharedPreferencesUtils.getPassword(mContext))
+                                    .compose(RxSchedulers.<UserInfo>applySchedulers())
+                                    .subscribe(new Action1<UserInfo>() {
+                                        @Override
+                                        public void call(UserInfo userInfo) {
+                                            SharedPreferencesUtils.saveToken(mContext, userInfo.getData().getToken());
+                                        }
+                                    });
+                            return Observable.timer(retryDelayMillis,
+                                    TimeUnit.MILLISECONDS);
+                        }
+                    }
+                    return Observable.error(throwable);
+                }
+            });
+        }
     }
 }

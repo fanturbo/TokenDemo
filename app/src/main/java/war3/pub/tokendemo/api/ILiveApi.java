@@ -17,8 +17,8 @@ import war3.pub.tokendemo.model.UserInfo;
 public interface ILiveApi {
 
     @GET("/api/v1/login")
-    Observable<UserInfo> login(@Path("username") String username, @Path("password") String password);
+    Observable<UserInfo> login(@Query("username") String username, @Query("password") String password);
 
     @GET("/api/v1/remind_list")
-    Observable<FollowLive> getFollow(@Path("token") String token);
+    Observable<FollowLive> getFollow(@Query("token") String token);
 }

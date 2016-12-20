@@ -59,4 +59,20 @@ public class SharedPreferencesUtils {
         return getString(context, "token", null);
     }
 
+    public static void saveUserName(Context context, String value) {
+        saveString(context, "username", value);
+    }
+
+    public static String getUserName(Context context) {
+        return getString(context, "username", null);
+    }
+
+    public static void savePassword(Context context, String value) {
+        saveString(context, "password", value);
+    }
+
+    public static String getPassword(Context context) {
+        return getString(context, "password", null);
+    }
+
 }

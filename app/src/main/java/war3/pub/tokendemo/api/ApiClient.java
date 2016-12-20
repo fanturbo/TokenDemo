@@ -34,7 +34,7 @@ public class ApiClient {
 
     private <T> T configRetrofit(Class<T> service) {
         OkHttpClient.Builder okHttpClient = new OkHttpClient.Builder();
-        okHttpClient.connectTimeout(DEFAULT_TIMEOUT, TimeUnit.SECONDS);
+        okHttpClient.connectTimeout(DEFAULT_TIMEOUT, TimeUnit.SECONDS).addInterceptor(new DemoInterceptor());
         retrofit = new Retrofit.Builder()
                 .baseUrl(Constants.baseUrl)
                 .client(okHttpClient.build())

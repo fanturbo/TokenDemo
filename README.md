@@ -1,0 +1,1 @@
+当token（或者cookie）过期时，根据服务器返回的状态，进行重新登录（或者get NewToken），然后使用新的token请求原先的接口。

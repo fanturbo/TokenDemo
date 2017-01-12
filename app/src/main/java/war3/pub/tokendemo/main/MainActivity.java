@@ -23,6 +23,7 @@ import rx.functions.Action1;
 import rx.functions.Func0;
 import rx.functions.Func1;
 import rx.functions.Func2;
+import rx.observables.BlockingObservable;
 import war3.pub.tokendemo.R;
 import war3.pub.tokendemo.api.ApiClient;
 import war3.pub.tokendemo.api.RxSchedulers;
@@ -65,7 +66,7 @@ public class MainActivity extends BaseActivity {
                         return ApiClient.getInstance().getLiveApi().getFollow(SharedPreferencesUtils.getToken(mContext));
                     }
                 })
-                .retryWhen(new RetryWithDelay(3, 1000))
+                .retryWhen(new RetryWithDelay(3, 1))
                 .compose(RxSchedulers.<FollowLive>applySchedulers())
                 .subscribe(new Action1<FollowLive>() {
                                @Override
@@ -147,19 +148,21 @@ public class MainActivity extends BaseActivity {
                 public Observable<?> call(final Throwable throwable) {
                     if (++retryCount <= maxRetries) {
                         if (throwable instanceof Exception) {
-                            //// TODO: 2016/12/20 有待改进 比如说登录接口返回较慢（慢的超过了retryCount*retryDelayMillis），那么会一直重试登录接口和follow数据接口，直到超过重试次数
+                            //2016/12/20 有待改进 比如说登录接口返回较慢（慢的超过了retryCount*retryDelayMillis），那么会一直重试登录接口和follow数据接口，直到超过重试次数
                             // 测试方法：比如说将延迟时间1000改成1
+                            //2017.1.12 已修改
                             Log.i("======", "重新登录");
                             //重新登录
-                            ApiClient.getInstance().getLiveApi().login(SharedPreferencesUtils.getUserName(mContext), SharedPreferencesUtils.getPassword(mContext))
-                                    .compose(RxSchedulers.<UserInfo>applySchedulers())
-                                    .subscribe(new Action1<UserInfo>() {
-                                        @Override
-                                        public void call(UserInfo userInfo) {
-                                            Log.i("======", "登录成功");
-                                            SharedPreferencesUtils.saveToken(mContext, userInfo.getData().getToken());
-                                        }
-                                    });
+                            //参考：https://mcxiaoke.gitbooks.io/rxdocs/content/operators/Blocking-Observable-Operators.html
+                            // BlockingObservable的方法不是将一个Observable变换为另一个，也不是过滤Observables，它们会打断Observable的调用链，会阻塞等待直到Observable发射了想要的数据，然后返回这个数据
+                            BlockingObservable.from(ApiClient.getInstance().getLiveApi().login(SharedPreferencesUtils.getUserName(mContext), SharedPreferencesUtils.getPassword(mContext))
+                                    .compose(RxSchedulers.<UserInfo>applySchedulers())).subscribe(new Action1<UserInfo>() {
+                                @Override
+                                public void call(UserInfo userInfo) {
+                                    Log.i("======", "登录成功");
+                                    SharedPreferencesUtils.saveToken(mContext, userInfo.getData().getToken());
+                                }
+                            });
                             return Observable.timer(retryDelayMillis,
                                     TimeUnit.MILLISECONDS);
                         }

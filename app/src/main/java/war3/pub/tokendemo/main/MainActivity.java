@@ -61,6 +61,7 @@ public class MainActivity extends BaseActivity {
                 .defer(new Func0<Observable<FollowLive>>() {
                     @Override
                     public Observable<FollowLive> call() {
+                        Log.i("======", "请求follow数据");
                         return ApiClient.getInstance().getLiveApi().getFollow(SharedPreferencesUtils.getToken(mContext));
                     }
                 })
@@ -73,9 +74,9 @@ public class MainActivity extends BaseActivity {
                                    Snackbar.make(fab, "获取数据成功", Snackbar.LENGTH_LONG)
                                            .setAction("Action", null).show();
                                    swipeRefreshLayout.setRefreshing(false);
-                                   if(mAdapter!=null){
+                                   if (mAdapter != null) {
                                        mAdapter.notifyDataSetChanged();
-                                   }else {
+                                   } else {
                                        mAdapter = new FollowUserAdapter(R.layout.item_follow_user, followLive.getData());
                                        recyclerviewFollow.setAdapter(mAdapter);
                                    }
@@ -121,6 +122,10 @@ public class MainActivity extends BaseActivity {
         return super.onOptionsItemSelected(item);
     }
 
+    /**
+     * 参考自这篇文章http://www.jcodecraeer.com/a/anzhuokaifa/androidkaifa/2016/0206/3953.html,retrywhen(Func1 notificationHandler)中notificationHandler只会被执行一遍
+     * 但是如何来实现不断重试呢，一个简单的小技巧，使用flatmap操作符。
+     */
     public class RetryWithDelay implements
             Func1<Observable<? extends Throwable>, Observable<?>> {
 
@@ -129,6 +134,7 @@ public class MainActivity extends BaseActivity {
         private int retryCount;
 
         public RetryWithDelay(int maxRetries, int retryDelayMillis) {
+            Log.i("======", "RetryWithDelay");
             this.maxRetries = maxRetries;
             this.retryDelayMillis = retryDelayMillis;
             this.retryCount = 0;
@@ -141,7 +147,8 @@ public class MainActivity extends BaseActivity {
                 public Observable<?> call(final Throwable throwable) {
                     if (++retryCount <= maxRetries) {
                         if (throwable instanceof Exception) {
-                            //// TODO: 2016/12/20 有待改进
+                            //// TODO: 2016/12/20 有待改进 比如说登录接口返回较慢（慢的超过了retryCount*retryDelayMillis），那么会一直重试登录接口和follow数据接口，直到超过重试次数
+                            // 测试方法：比如说将延迟时间1000改成1
                             Log.i("======", "重新登录");
                             //重新登录
                             ApiClient.getInstance().getLiveApi().login(SharedPreferencesUtils.getUserName(mContext), SharedPreferencesUtils.getPassword(mContext))
@@ -149,6 +156,7 @@ public class MainActivity extends BaseActivity {
                                     .subscribe(new Action1<UserInfo>() {
                                         @Override
                                         public void call(UserInfo userInfo) {
+                                            Log.i("======", "登录成功");
                                             SharedPreferencesUtils.saveToken(mContext, userInfo.getData().getToken());
                                         }
                                     });

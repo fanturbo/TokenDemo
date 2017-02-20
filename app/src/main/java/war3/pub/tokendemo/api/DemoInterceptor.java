@@ -16,6 +16,7 @@ import okhttp3.ResponseBody;
 import okio.Buffer;
 import okio.BufferedSource;
 import retrofit2.Call;
+import war3.pub.tokendemo.global.TokenInvalideException;
 
 /**
  * Created by turbo on 2016/12/20.
@@ -41,7 +42,7 @@ public class DemoInterceptor implements Interceptor {
 
 
         if (isTokenExpired(bodyString)) {//根据和服务端的约定判断token过期
-            throw new RuntimeException();
+            throw new TokenInvalideException();
             //本身的解决办法是如果token过期，同步重新请求token，然后重新组装新的请求（即继续执行原先的请求数据操作）
         }
         return response;

@@ -5,15 +5,15 @@ import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v4.widget.SwipeRefreshLayout;
-import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.StaggeredGridLayoutManager;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
+import android.widget.Toast;
 
+import java.net.UnknownHostException;
 import java.util.concurrent.TimeUnit;
 
 import butterknife.BindView;
@@ -22,12 +22,12 @@ import rx.Observable;
 import rx.functions.Action1;
 import rx.functions.Func0;
 import rx.functions.Func1;
-import rx.functions.Func2;
 import rx.observables.BlockingObservable;
 import war3.pub.tokendemo.R;
 import war3.pub.tokendemo.api.ApiClient;
 import war3.pub.tokendemo.api.RxSchedulers;
 import war3.pub.tokendemo.base.BaseActivity;
+import war3.pub.tokendemo.global.TokenInvalideException;
 import war3.pub.tokendemo.model.FollowLive;
 import war3.pub.tokendemo.model.UserInfo;
 import war3.pub.tokendemo.util.SharedPreferencesUtils;
@@ -88,6 +88,9 @@ public class MainActivity extends BaseActivity {
                             public void call(Throwable throwable) {
                                 swipeRefreshLayout.setRefreshing(false);
                                 Log.i("======", throwable.toString());
+                                if (throwable instanceof UnknownHostException) {
+                                    Toast.makeText(mContext, "无网络", Toast.LENGTH_SHORT).show();
+                                }
                             }
                         }
                 );
@@ -147,7 +150,11 @@ public class MainActivity extends BaseActivity {
                 @Override
                 public Observable<?> call(final Throwable throwable) {
                     if (++retryCount <= maxRetries) {
-                        if (throwable instanceof Exception) {
+                        if (throwable instanceof UnknownHostException) {
+                            return Observable.error(throwable);
+                        }
+                        if (throwable instanceof TokenInvalideException) {
+                            //加上无网络的判断
                             //2016/12/20 有待改进 比如说登录接口返回较慢（慢的超过了retryCount*retryDelayMillis），那么会一直重试登录接口和follow数据接口，直到超过重试次数
                             // 测试方法：比如说将延迟时间1000改成1
                             //2017.1.12 已修改

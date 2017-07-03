@@ -39,7 +39,7 @@
                     android:hint="@string/prompt_email"
                     android:inputType="textEmailAddress"
                     android:maxLines="1"
-                    android:text="war3bbs"
+                    android:text="615951217@qq.com"
                     android:singleLine="true" />
 
             </android.support.design.widget.TextInputLayout>
@@ -56,7 +56,6 @@
                     android:imeOptions="actionUnspecified"
                     android:inputType="textPassword"
                     android:maxLines="1"
-                    android:text="zhuzhu520"
                     android:singleLine="true" />
 
             </android.support.design.widget.TextInputLayout>

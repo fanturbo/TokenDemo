@@ -58,14 +58,20 @@ public class MainActivity extends BaseActivity {
 
     private void getFollowLive() {
         swipeRefreshLayout.setRefreshing(true);
-        Observable
-                .defer(new Func0<Observable<FollowLive>>() {
-                    @Override
-                    public Observable<FollowLive> call() {
-                        Log.i("======", "请求follow数据");
-                        return ApiClient.getInstance().getLiveApi().getFollow(SharedPreferencesUtils.getToken(mContext));
-                    }
-                })
+        Observable.just(null).flatMap(new Func1<Object, Observable<FollowLive>>() {
+            @Override
+            public Observable<FollowLive> call(Object o) {
+                return ApiClient.getInstance().getLiveApi().getFollow(SharedPreferencesUtils.getToken(mContext));
+            }
+        })
+//        Observable
+//                .defer(new Func0<Observable<FollowLive>>() {
+//                    @Override
+//                    public Observable<FollowLive> call() {
+//                        Log.i("======", "请求follow数据");
+//                        return ApiClient.getInstance().getLiveApi().getFollow(SharedPreferencesUtils.getToken(mContext));
+//                    }
+//                })
                 .retryWhen(new RetryWithDelay(3, 1))
                 .compose(RxSchedulers.<FollowLive>applySchedulers())
                 .subscribe(new Action1<FollowLive>() {

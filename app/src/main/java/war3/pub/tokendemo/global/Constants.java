@@ -5,4 +5,5 @@ package war3.pub.tokendemo.global;
  */
 public interface Constants {
     String baseUrl = "http://capi.douyucdn.cn";
+    String baseUrl2 = "https://coding.net";
 }

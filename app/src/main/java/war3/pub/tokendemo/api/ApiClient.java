@@ -34,9 +34,9 @@ public class ApiClient {
 
     private <T> T configRetrofit(Class<T> service) {
         OkHttpClient.Builder okHttpClient = new OkHttpClient.Builder();
-        okHttpClient.connectTimeout(DEFAULT_TIMEOUT, TimeUnit.SECONDS).addInterceptor(new DemoInterceptor());
+        okHttpClient.connectTimeout(DEFAULT_TIMEOUT, TimeUnit.SECONDS).addInterceptor(new Demo2Interceptor());
         retrofit = new Retrofit.Builder()
-                .baseUrl(Constants.baseUrl)
+                .baseUrl(Constants.baseUrl2)
                 .client(okHttpClient.build())
                 .addConverterFactory(GsonConverterFactory.create())
                 .addCallAdapterFactory(RxJavaCallAdapterFactory.create())

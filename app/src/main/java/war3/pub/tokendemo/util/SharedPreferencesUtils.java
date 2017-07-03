@@ -59,6 +59,15 @@ public class SharedPreferencesUtils {
         return getString(context, "token", null);
     }
 
+
+    public static void saveCookie(Context context, String value) {
+        saveString(context, "Cookie", value);
+    }
+
+    public static String getCookie(Context context) {
+        return getString(context, "Cookie", null);
+    }
+
     public static void saveUserName(Context context, String value) {
         saveString(context, "username", value);
     }
@@ -68,7 +77,7 @@ public class SharedPreferencesUtils {
     }
 
     public static void savePassword(Context context, String value) {
-        saveString(context, "password", value);
+        saveString(context, "password", SimpleSHA1.sha1(value));
     }
 
     public static String getPassword(Context context) {
